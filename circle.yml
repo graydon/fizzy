@@ -14,7 +14,7 @@ executors:
       - image: ethereum/cpp-build-env:16-clang-11
   macos:
     macos:
-      xcode: 11.6.0
+      xcode: 11.1.0
   rust:
     docker:
       - image: cimg/rust:1.49
