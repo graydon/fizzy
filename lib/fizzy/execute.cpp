@@ -489,6 +489,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     stack.drop(num_args);
 
     // Push back the result
+    assert(func_type.outputs.size() == (ret.has_value ? 1 : 0));
     if (ret.has_value)
         stack.push(ret.value);
 
