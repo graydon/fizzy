@@ -41,6 +41,23 @@ mod sys;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
+#[derive(Debug)]
+pub struct Error(String);
+
+impl From<String> for Error {
+    fn from(error: String) -> Self {
+        Error { 0: error }
+    }
+}
+
+impl From<&str> for Error {
+    fn from(error: &str) -> Self {
+        Error {
+            0: error.to_string(),
+        }
+    }
+}
+
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
     unsafe { sys::fizzy_validate(input.as_ref().as_ptr(), input.as_ref().len()) }
@@ -68,10 +85,10 @@ impl Clone for Module {
 }
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
-pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, ()> {
+pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     let ptr = unsafe { sys::fizzy_parse(input.as_ref().as_ptr(), input.as_ref().len()) };
     if ptr.is_null() {
-        return Err(());
+        return Err("parse() failure".into());
     }
     Ok(Module { 0: ptr })
 }
@@ -88,7 +105,7 @@ impl Drop for Instance {
 impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
-    pub fn instantiate(self) -> Result<Instance, ()> {
+    pub fn instantiate(self) -> Result<Instance, Error> {
         debug_assert!(!self.0.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
@@ -104,7 +121,7 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err(());
+            return Err("instantiate() failure".into());
         }
         Ok(Instance {
             0: unsafe { NonNull::new_unchecked(ptr) },
@@ -413,16 +430,16 @@ impl Instance {
         name: &str,
         args: &[TypedValue],
         depth: i32,
-    ) -> Result<TypedExecutionResult, ()> {
+    ) -> Result<TypedExecutionResult, Error> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
-            return Err(());
+            return Err("function not found".into());
         }
         let func_idx = func_idx.unwrap();
 
         let func_type = unsafe { self.get_function_type(func_idx) };
         if func_type.inputs_size != args.len() {
-            return Err(());
+            return Err("argument count mismatch".into());
         }
 
         // Validate input types.
@@ -430,7 +447,7 @@ impl Instance {
         let expected_types =
             unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
-            return Err(());
+            return Err("argument type mistmatch".into());
         }
 
         // Translate to untyped raw values.
