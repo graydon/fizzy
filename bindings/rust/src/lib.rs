@@ -41,20 +41,25 @@ mod sys;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-#[derive(Debug)]
-pub struct Error(String);
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum Error {
+    ParsingFailure,
+    InstantiationFailure,
+    FunctionNotFound,
+    ArgumentCountMismatch,
+    Trapped,
+    Custom(String),
+}
 
 impl From<String> for Error {
     fn from(error: String) -> Self {
-        Error { 0: error }
+        Error::Custom(error)
     }
 }
 
 impl From<&str> for Error {
     fn from(error: &str) -> Self {
-        Error {
-            0: error.to_string(),
-        }
+        Error::Custom(error.to_string())
     }
 }
 
@@ -88,7 +93,7 @@ impl Clone for Module {
 pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     let ptr = unsafe { sys::fizzy_parse(input.as_ref().as_ptr(), input.as_ref().len()) };
     if ptr.is_null() {
-        return Err("parse() failure".into());
+        return Err(Error::ParsingFailure);
     }
     Ok(Module { 0: ptr })
 }
