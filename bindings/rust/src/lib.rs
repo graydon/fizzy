@@ -48,12 +48,17 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
 
 /// A parsed and validated WebAssembly 1.0 module.
 // NOTE: cannot use NonNull here given this is *const
-pub struct Module(*const sys::FizzyModule);
+pub struct Module {
+    ptr: *const sys::FizzyModule,
+    owned: bool,
+}
 
 impl Drop for Module {
     fn drop(&mut self) {
-        debug_assert!(!self.0.is_null());
-        unsafe { sys::fizzy_free_module(self.0) }
+        if self.owned {
+            debug_assert!(!self.ptr.is_null());
+            unsafe { sys::fizzy_free_module(self.ptr) }
+        }
     }
 }
 
@@ -73,16 +78,10 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, ()> {
     if ptr.is_null() {
         return Err(());
     }
-    Ok(Module { 0: ptr })
-}
-
-/// A view of a moduel for inspection.
-pub struct ModuleInspector(*const sys::FizzyModule);
-
-impl ModuleInspector {
-    pub fn has_start_function(&self) -> bool {
-        unsafe { sys::fizzy_module_has_start_function(self.0) }
-    }
+    Ok(Module {
+        ptr: ptr,
+        owned: true,
+    })
 }
 
 /// An instance of a module.
@@ -98,10 +97,13 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, ()> {
-        debug_assert!(!self.0.is_null());
+        if !self.owned {
+            return Err(());
+        }
+        debug_assert!(!self.ptr.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
-                self.0,
+                self.ptr,
                 std::ptr::null(),
                 0,
                 std::ptr::null(),
@@ -120,8 +122,8 @@ impl Module {
         })
     }
 
-    pub fn inspect(&self) -> &ModuleInspector {
-        &ModuleInspector { 0: self.0 }
+    pub fn has_start_function(&self) -> bool {
+        unsafe { sys::fizzy_module_has_start_function(self.ptr) }
     }
 }
 
@@ -373,9 +375,12 @@ impl Instance {
     unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
         sys::fizzy_get_instance_module(self.0.as_ptr())
     }
-    
-    fn get_module(&self) -> &ModuleInspector {
-        &ModuleInspector { 0: unsafe { self.get_module_ptr() } }
+
+    pub fn get_module(&self) -> Module {
+        Module {
+            ptr: unsafe { self.get_module_ptr() },
+            owned: false,
+        }
     }
 
     /// Find index of exported function by name.
