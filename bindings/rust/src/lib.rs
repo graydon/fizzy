@@ -64,11 +64,14 @@ impl Drop for Module {
 
 impl Clone for Module {
     fn clone(&self) -> Self {
-        debug_assert!(!self.0.is_null());
-        let ptr = unsafe { sys::fizzy_clone_module(self.0) };
+        debug_assert!(!self.ptr.is_null());
+        let ptr = unsafe { sys::fizzy_clone_module(self.ptr) };
         // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
         assert!(!ptr.is_null());
-        Module { 0: ptr }
+        Module {
+            ptr: ptr,
+            owned: true,
+        }
     }
 }
 
