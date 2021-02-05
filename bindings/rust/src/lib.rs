@@ -88,11 +88,14 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, ()> {
 }
 
 /// An instance of a module.
-pub struct Instance(NonNull<sys::FizzyInstance>);
+pub struct Instance {
+    instance: NonNull<sys::FizzyInstance>,
+    module: Module,
+}
 
 impl Drop for Instance {
     fn drop(&mut self) {
-        unsafe { sys::fizzy_free_instance(self.0.as_ptr()) }
+        unsafe { sys::fizzy_free_instance(self.instance.as_ptr()) }
     }
 }
 
@@ -120,8 +123,13 @@ impl Module {
         if ptr.is_null() {
             return Err(());
         }
+        let instance = unsafe { NonNull::new_unchecked(ptr) };
         Ok(Instance {
-            0: unsafe { NonNull::new_unchecked(ptr) },
+            instance: instance,
+            module: Module {
+                ptr: unsafe { sys::fizzy_get_instance_module(instance.as_ptr()) },
+                owned: false,
+            },
         })
     }
 
@@ -378,17 +386,14 @@ impl Instance {
 
     /// Get a read-only pointer to the module.
     unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
-        let ptr = sys::fizzy_get_instance_module(self.0.as_ptr());
+        let ptr = sys::fizzy_get_instance_module(self.instance.as_ptr());
         debug_assert!(!ptr.is_null());
         ptr
     }
 
     /// Get a non-owned module instance.
-    pub fn get_module(&self) -> Module {
-        Module {
-            ptr: unsafe { self.get_module_ptr() },
-            owned: false,
-        }
+    pub fn get_module(&self) -> &Module {
+        &self.module
     }
 
     /// Find index of exported function by name.
@@ -421,7 +426,7 @@ impl Instance {
         depth: i32,
     ) -> ExecutionResult {
         ExecutionResult {
-            0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr(), depth),
+            0: sys::fizzy_execute(self.instance.as_ptr(), func_idx, args.as_ptr(), depth),
         }
     }
 
