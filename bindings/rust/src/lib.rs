@@ -126,7 +126,7 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err("instantiate() failure".into());
+            return Err(Error::InstantiationFailure);
         }
         Ok(Instance {
             0: unsafe { NonNull::new_unchecked(ptr) },
@@ -459,6 +459,10 @@ impl Instance {
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
         let ret = unsafe { self.unsafe_execute(func_idx, &args, depth) };
+        let ret: ExecutionResult = ret;
+        if ret.trapped() {
+            return Err(Error::Trapped);
+        }
         Ok(TypedExecutionResult {
             result: ret.0,
             value_type: func_type.output,
