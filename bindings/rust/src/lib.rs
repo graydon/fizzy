@@ -338,8 +338,8 @@ impl Instance {
     /// # Safety
     /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
     pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], ()> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(memory_data != std::ptr::null_mut());
@@ -356,8 +356,8 @@ impl Instance {
         offset: u32,
         size: usize,
     ) -> Result<&mut [u8], ()> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(memory_data != std::ptr::null_mut());
@@ -367,7 +367,7 @@ impl Instance {
 
     /// Returns the current memory size, in bytes.
     pub fn memory_size(&self) -> usize {
-        unsafe { sys::fizzy_get_instance_memory_size(self.0.as_ptr()) }
+        unsafe { sys::fizzy_get_instance_memory_size(self.instance.as_ptr()) }
     }
 
     /// Copies memory from `offset` to `target`, for the length of `target.len()`.
