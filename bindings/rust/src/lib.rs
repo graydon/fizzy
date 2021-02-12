@@ -435,7 +435,7 @@ impl Instance {
         name: &str,
         args: &[TypedValue],
         depth: i32,
-    ) -> Result<TypedExecutionResult, Error> {
+    ) -> Result<TypedValue, Error> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
             return Err("function not found".into());
@@ -458,15 +458,25 @@ impl Instance {
         // Translate to untyped raw values.
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
+        // TODO: could actually use sys::fizzy_execute directly to avoid the ExecutionResult struct
         let ret = unsafe { self.unsafe_execute(func_idx, &args, depth) };
         let ret: ExecutionResult = ret;
         if ret.trapped() {
             return Err(Error::Trapped);
         }
-        Ok(TypedExecutionResult {
-            result: ret.0,
-            value_type: func_type.output,
-        })
+        let ret = ret.value();
+        if ret.is_none() {
+            return Ok(None);
+        }
+        assert!(func_type.output != sys::FizzyValueTypeVoid);
+        let ret = match self.value_type {
+            sys::FizzyValueTypeI32 => TypedValue::U32(ret.as_u32()),
+            sys::FizzyValueTypeI64 => TypedValue::U64(ret.as_u64()),
+            sys::FizzyValueTypeF32 => TypedValue::F32(ret.as_f32()),
+            sys::FizzyValueTypeF64 => TypedValue::F64(ret.as_f64()),
+            _ => panic!(),
+        };
+        Ok(Some(ret))
     }
 }
 
