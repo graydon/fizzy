@@ -152,6 +152,12 @@ impl Drop for Instance {
     }
 }
 
+struct HostFunction {
+    module: CString,
+    name: CString,
+    index: usize,
+}
+
 unsafe extern "C" fn host_callback(
     context: *mut std::os::raw::c_void,
     instance: *mut sys::FizzyInstance,
@@ -162,7 +168,8 @@ unsafe extern "C" fn host_callback(
     unimplemented!()
 }
 
-fn create_function_import_list() -> Vec<sys::FizzyImportedFunction> {
+fn create_function_import_list(host_functions: &[HostFunction]) -> Vec<sys::FizzyImportedFunction> {
+    assert!(host_functions.len() == 1);
     let fn_type = sys::FizzyFunctionType {
         output: sys::FizzyValueTypeVoid,
         inputs: std::ptr::null(),
@@ -175,8 +182,8 @@ fn create_function_import_list() -> Vec<sys::FizzyImportedFunction> {
         context: std::ptr::null_mut(),
     };
     vec![sys::FizzyImportedFunction {
-        module: unsafe { CString::new("env").unwrap().as_ptr() },
-        name: unsafe { CString::new("print").unwrap().as_ptr() },
+        module: host_functions[0].module.as_ptr(),
+        name: host_functions[0].name.as_ptr(),
         external_function: ext_fn,
     }]
 }
@@ -187,7 +194,11 @@ impl Module {
     pub fn instantiate(self) -> Result<Instance, String> {
         debug_assert!(!self.0.is_null());
         let mut err = FizzyErrorBox::new();
-        let import_list = create_function_import_list();
+        let import_list = create_function_import_list(&[HostFunction {
+            module: CString::new("env").unwrap(),
+            name: CString::new("print").unwrap(),
+            index: 0,
+        }]);
         let ptr = unsafe {
             sys::fizzy_resolve_instantiate(
                 self.0,
