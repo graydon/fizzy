@@ -9,6 +9,7 @@
 #include <fizzy/fizzy.h>
 #include <cstring>
 #include <memory>
+#include <iostream>
 
 namespace
 {
@@ -626,6 +627,11 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 
         set_success(error);
         return wrap(instance.release());
+    }
+    catch (fizzy::instantiate_error const& e)
+    {
+        std::cout << e.what() << std::endl;
+        return nullptr;
     }
     catch (...)
     {
