@@ -71,7 +71,7 @@ TEST(cxx20_span, stack)
 {
     OperandStack stack(nullptr, 0, 0, 4);
 
-    span<const Value> s_empty(stack.rend(), size_t{0});
+    span<const fizzy::Value> s_empty(stack.rend(), size_t{0});
     EXPECT_TRUE(s_empty.empty());
     EXPECT_EQ(s_empty.size(), 0);
 
@@ -81,7 +81,7 @@ TEST(cxx20_span, stack)
     stack.push(13);
 
     constexpr auto num_items = 2;
-    span<const Value> s(stack.rend() - num_items, num_items);
+    span<const fizzy::Value> s(stack.rend() - num_items, num_items);
     EXPECT_FALSE(s.empty());
     EXPECT_EQ(s.size(), 2);
     EXPECT_EQ(s[0].i32, 12);
