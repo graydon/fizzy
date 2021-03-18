@@ -6,6 +6,7 @@ include(GoogleTest)
 
 add_executable(fizzy-unittests)
 target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy-internal fizzy::wasi fizzy::test-utils GTest::gtest_main GTest::gmock)
+target_precompile_headers(fizzy-unittests PRIVATE <gtest/gtest.h> <gmock/gmock.h>)
 
 target_sources(
     fizzy-unittests PRIVATE

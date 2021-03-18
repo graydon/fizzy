@@ -2,7 +2,7 @@
 # Copyright 2019-2020 The Fizzy Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 cmake_policy(SET CMP0077 NEW)
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
