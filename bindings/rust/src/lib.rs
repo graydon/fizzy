@@ -196,7 +196,7 @@ impl Drop for Instance {
 impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
-    pub fn instantiate(self) -> Result<Instance, String> {
+    pub fn instantiate(self) -> Result<Instance, Error> {
         debug_assert!(!self.0.is_null());
         let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
@@ -215,7 +215,7 @@ impl Module {
         core::mem::forget(self);
         if ptr.is_null() {
             debug_assert!(err.code() != 0);
-            Err(err.message())
+            Err(err.error().unwrap())
         } else {
             debug_assert!(err.code() == 0);
             Ok(Instance {
@@ -785,7 +785,9 @@ mod tests {
         let instance = module.unwrap().instantiate();
         assert_eq!(
             instance.err().unwrap(),
-            "module defines an imported memory but none was provided"
+            Error::InstantiationFailed(
+                "module defines an imported memory but none was provided".to_string()
+            )
         );
     }
 
